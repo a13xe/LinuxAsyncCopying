@@ -30,9 +30,10 @@ gcc -o async_copy async_copy.c -lrt
 
 - The program will prompt you for these inputs (Example):
   
-<div align="left">
-<img width=49% alt="Screenshot" src="https://github.com/a13xe/LinuxAsyncCopying/assets/77492646/8106f33c-8de6-4ac6-8b0a-be408bc83801"/>
+<div align="center">
+<img width=98% alt="Screenshot" src="https://github.com/a13xe/LinuxAsyncCopying/assets/77492646/769d987d-0049-4df3-b9f6-2087467a48e0"/>
 </div>
+
 
 ## :spiral_notepad: Notes
 
