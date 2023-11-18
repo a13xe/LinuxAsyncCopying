@@ -19,16 +19,49 @@ sudo apt install gcc git -y
 
 ## :hammer_and_wrench: Compilation and Usage
 
-- To compile the program, use the following command:
+### 1. To compile the program, use the following commands:
+
+
+<table>
+<tr>
+<td>
+Clone the repo:
+<td>
 
 ```bash
 git clone https://github.com/a13xe/LinuxAsyncCopying.git
-cd LinuxAsyncCopying
-gcc -o async_copy async_copy.c -lrt
-./async_copy
 ```
 
-- The program will prompt you for these inputs (Example):
+<tr>
+<td>
+Navigate to the directory:
+<td>
+
+```bash
+cd LinuxAsyncCopying
+```
+
+<tr>
+<td>
+Compile the executable:
+<td>
+
+```bash
+gcc -o async_copy async_copy.c -lrt
+```
+
+<tr>
+<td>
+Execute the program:
+<td>
+
+```bash
+./async_copy
+```
+</table>
+
+
+### 2. The program will prompt you for these inputs (Example):
   
 <div align="center">
 <img width=98% alt="Screenshot" src="https://github.com/a13xe/LinuxAsyncCopying/assets/77492646/769d987d-0049-4df3-b9f6-2087467a48e0"/>
