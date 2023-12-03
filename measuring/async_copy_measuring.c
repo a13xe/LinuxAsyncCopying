@@ -7,97 +7,100 @@
 #include <aio.h>
 #include <time.h>
 
-
 #define MAX_IO_OPERATIONS 64
 struct aiocb aiocb_list[MAX_IO_OPERATIONS];
 
-
-void aio_read_setup(struct aiocb *aiocbp, int fd, off_t offset, volatile void *buf, size_t size) 
+// -------------------------------------------------------------------------------------------------------
+// Function to set up an asynchronous read operation.
+// -------------------------------------------------------------------------------------------------------
+void aio_read_setup(struct aiocb *aiocbp, int fd, off_t offset, volatile void *buf, size_t size)
 {
-    memset(aiocbp, 0, sizeof(struct aiocb));
-    aiocbp->aio_fildes = fd;
-    aiocbp->aio_buf = buf;
-    aiocbp->aio_nbytes = size;
-    aiocbp->aio_offset = offset;
-    if (aio_read(aiocbp) == -1) 
+    memset(aiocbp, 0, sizeof(struct aiocb)); // Clear out the aiocb structure to zero.
+    aiocbp->aio_fildes = fd;                 // File descriptor for the file to read from.
+    aiocbp->aio_buf = buf;                   // Buffer to read the data into.
+    aiocbp->aio_nbytes = size;               // Number of bytes to read.
+    aiocbp->aio_offset = offset;             // Offset in the file to start reading from.
+    if (aio_read(aiocbp) == -1)              // Initiate the read operation.
     {
         perror("aio_read");
         exit(EXIT_FAILURE);
     }
 }
 
-
-void aio_write_setup(struct aiocb *aiocbp, int fd, off_t offset, volatile void *buf, size_t size) 
+// -------------------------------------------------------------------------------------------------------
+// Function to set up an asynchronous write operation.
+// -------------------------------------------------------------------------------------------------------
+void aio_write_setup(struct aiocb *aiocbp, int fd, off_t offset, volatile void *buf, size_t size)
 {
-    memset(aiocbp, 0, sizeof(struct aiocb));
-    aiocbp->aio_fildes = fd;
-    aiocbp->aio_buf = buf;
-    aiocbp->aio_nbytes = size;
-    aiocbp->aio_offset = offset;
-    if (aio_write(aiocbp) == -1) 
+    memset(aiocbp, 0, sizeof(struct aiocb)); // Clear out the aiocb structure to zero.
+    aiocbp->aio_fildes = fd;                 // File descriptor for the file to write to.
+    aiocbp->aio_buf = buf;                   // Buffer with the data to write.
+    aiocbp->aio_nbytes = size;               // Number of bytes to write.
+    aiocbp->aio_offset = offset;             // Offset in the file to start writing to.
+    if (aio_write(aiocbp) == -1)             // Initiate the write operation.
     {
         perror("aio_write");
         exit(EXIT_FAILURE);
     }
 }
 
-
-void wait_for_aio_operations(struct aiocb *aiocbp_list, int num_ops) 
+// -------------------------------------------------------------------------------------------------------
+// Function to wait for all asynchronous I/O operations to complete.
+// -------------------------------------------------------------------------------------------------------
+void wait_for_aio_operations(struct aiocb *aiocbp_list, int num_ops)
 {
-    for (int i = 0; i < num_ops; i++) {
-        while (aio_error(&aiocbp_list[i]) == EINPROGRESS) 
-        {
-            usleep(1000);
-        }
-        int ret = aio_return(&aiocbp_list[i]);
-        if (ret == -1) 
-        {
-            perror("aio_return");
-            exit(EXIT_FAILURE);
-        }
+    struct aiocb *aiocbp_array[num_ops];
+    for (int i = 0; i < num_ops; ++i) 
+    {
+        aiocbp_array[i] = &aiocbp_list[i];
     }
+    const struct timespec timeout = {1, 0}; // 1-second timeout
+    aio_suspend((const struct aiocb *const *)aiocbp_array, num_ops, &timeout);
 }
 
-
-int main()
+// -------------------------------------------------------------------------------------------------------
+// MAIN Function
+// -------------------------------------------------------------------------------------------------------
+int main() 
 {
     char source_path[256];
     char destination_path[256];
-    size_t block_size;
+    size_t block_sizes[] = {4096, 4096*2, 4096*4, 4096*8, 4096*12, 4096*16, 4096*32};
+    int operations[] = {1, 2, 4, 8, 12, 16};
+    double execution_times[6][7]; 
 
-    printf("Enter the block size in KB for copying: ");
-    scanf("%zu", &block_size);
-    block_size *= 1024; // Convert the block size from KB to bytes.
-
-    size_t block_sizes[] = {block_size, block_size*2, block_size*3, block_size*4, block_size*5, block_size*6, block_size*7, block_size*8};
-    int operations[] = {1, 2, 4, 8, 12, 16, 32, 64};
-    double execution_times[8][8]; // 8 operations x 8 block sizes
-    FILE *file = fopen("execution_times.csv", "w");
-    if (file == NULL) 
-    {
-        perror("fopen");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(file, "BlockSize(KB), 1 Op, 2 Ops, 4 Ops, 8 Ops, 12 Ops, 16 Ops, 32 Ops, 64 Ops\n");
-    
     printf("Enter the source file path: ");
     scanf("%255s", source_path);
 
     printf("Enter the destination file path: ");
     scanf("%255s", destination_path);
 
-    for (int bs_index = 0; bs_index < 8; bs_index++) 
+    FILE *file = fopen("execution_times.csv", "w");
+    if (file == NULL) 
+    {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(file, "BlockSize(KB), 1 Op, 2 Ops, 4 Ops, 8 Ops, 12 Ops, 16 Ops\n");
+
+    for (int bs_index = 0; bs_index < 7; bs_index++) 
     {
         size_t block_size = block_sizes[bs_index];
+        fprintf(file, "%lu", block_size / 1024); 
 
-        fprintf(file, "%lu", (bs_index++)*block_size / 1024); // Start of a new line in CSV
-
-        for (int op_index = 0; op_index < 8; op_index++) 
+        for (int op_index = 0; op_index < 6; op_index++) 
         {
             int num_async_ops = operations[op_index];
             int source_fd = open(source_path, O_RDONLY);
             int destination_fd = open(destination_path, O_WRONLY | O_CREAT, 0644);
             char *buffer = (char *)malloc(block_size * num_async_ops);
+            if (!buffer) 
+            {
+                perror("malloc");
+                exit(EXIT_FAILURE);
+            }
+
             off_t offset = 0;
             struct timespec start, finish;
             double elapsed;
@@ -109,7 +112,7 @@ int main()
                 aio_read_setup(&aiocb_list[i], source_fd, offset, buffer + (i * block_size), block_size);
                 offset += block_size;
             }
-
+            
             int ops_in_progress = num_async_ops;
             while (ops_in_progress > 0) 
             {
@@ -137,31 +140,19 @@ int main()
                     }
                 }
             }
-
             clock_gettime(CLOCK_MONOTONIC, &finish);
             elapsed = (finish.tv_sec - start.tv_sec);
             elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
             execution_times[op_index][bs_index] = elapsed;
-
-            fprintf(file, ", %f", elapsed); // Writing each execution time to the CSV
-
+            fprintf(file, ", %f", elapsed); 
             close(source_fd);
             close(destination_fd);
             free(buffer);
         }
-        fprintf(file, "\n"); // End of the current line (block size iteration)
+        fprintf(file, "\n"); 
     }
-
     fclose(file);
-
-    printf("\nExecution Times for Different Numbers of Operations and Block Sizes:\n");
-    for (int i = 0; i < 8; i++) 
-    {
-        for (int j = 0; j < 8; j++) 
-        {
-            printf("%d operations with %lu KB block size: %f seconds\n", operations[i], block_sizes[j] / 1024 / block_size, execution_times[i][j]);
-        }
-    }
+    printf("\nExecution times have been saved to 'execution_times.csv'\n");
 
     return 0;
 }
