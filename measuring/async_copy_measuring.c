@@ -47,15 +47,20 @@ void aio_write_setup(struct aiocb *aiocbp, int fd, off_t offset, volatile void *
 // -------------------------------------------------------------------------------------------------------
 // Function to wait for all asynchronous I/O operations to complete.
 // -------------------------------------------------------------------------------------------------------
-void wait_for_aio_operations(struct aiocb *aiocbp_list, int num_ops)
+void wait_for_aio_operations(struct aiocb *aiocbp_list, int num_ops) 
 {
-    struct aiocb *aiocbp_array[num_ops];
-    for (int i = 0; i < num_ops; ++i) 
-    {
-        aiocbp_array[i] = &aiocbp_list[i];
+    for (int i = 0; i < num_ops; i++) {
+        while (aio_error(&aiocbp_list[i]) == EINPROGRESS) 
+        {
+            usleep(1);
+        }
+        int ret = aio_return(&aiocbp_list[i]);
+        if (ret == -1) 
+        {
+            perror("aio_return");
+            exit(EXIT_FAILURE);
+        }
     }
-    const struct timespec timeout = {1, 0}; // 1-second timeout
-    aio_suspend((const struct aiocb *const *)aiocbp_array, num_ops, &timeout);
 }
 
 // -------------------------------------------------------------------------------------------------------
