@@ -43,11 +43,14 @@ cd LinuxAsyncCopying
 
 <tr>
 <td>
-Compile the executable:
+Compile the executable (choose one):
 <td>
 
 ```bash
-gcc -o async_copy async_copy.c -lrt
+gcc -o async_copy async_copy_aio_error.c -lrt
+```
+```bash
+gcc -o async_copy async_copy_aio_suspend.c -lrt
 ```
 
 <tr>
